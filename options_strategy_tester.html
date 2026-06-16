@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Options Strategy Tester</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { min-height: 100%; }
+body {
+  font-family: 'Courier New', Courier, monospace;
+  background: #050d1a; color: #e8edf5;
+  padding: 12px 16px; font-size: 13px;
+}
+.top-bar { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.header { font-size:11px; color:#4a6080; letter-spacing:0.1em; text-transform:uppercase; flex-shrink:0; }
+.header span { color:#2a70d0; }
+.theme-btn, .back-btn, .run-btn {
+  font-family:'Courier New',monospace; cursor:pointer; transition:all 0.15s;
+  border-radius:6px; background:transparent;
+}
+.theme-btn {
+  padding:4px 10px; font-size:11px; border:0.5px solid #1a2e4a;
+  color:#4a6080; flex-shrink:0; letter-spacing:.05em;
+}
+.theme-btn:hover { background:#0f2040; color:#e8edf5; }
+.back-btn {
+  padding:4px 12px; font-size:12px; border:0.5px solid #1a2e4a;
+  color:#8aaac8; text-decoration:none; display:inline-block; flex-shrink:0;
+}
+.back-btn:hover { background:#0f2040; color:#e8edf5; border-color:#2a5090; }
+.layout { display:grid; grid-template-columns:280px 1fr; gap:12px; align-items:start; }
+.panel { background:#0a1628; border:0.5px solid #1a2e4a; border-radius:10px; padding:10px 12px; margin-bottom:12px; }
+.panel:last-child { margin-bottom:0; }
+.panel-title { font-size:11px; color:#4a6080; letter-spacing:.07em; text-transform:uppercase; margin-bottom:8px; }
+.left-col { display:flex; flex-direction:column; }
+.pos-list { display:flex; flex-direction:column; gap:5px; }
+.pos-item {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:7px 10px; border-radius:6px; border:0.5px solid #1a2e4a;
+  cursor:pointer; transition:all 0.15s; background:#050d1a;
+}
+.pos-item:hover { border-color:#2a5090; background:#0a1628; }
+.pos-item.active { border-color:#2a70d0; background:#0a1e38; }
+.pos-item.owned { border-left:3px solid #1fba87; }
+.pos-ticker { font-weight:700; font-size:13px; }
+.pos-meta { font-size:10px; color:#4a6080; margin-top:1px; }
+.pos-badge { font-size:10px; padding:2px 6px; border-radius:3px; font-weight:700; letter-spacing:.04em; flex-shrink:0; }
+.badge-watch { background:#0a1e38; color:#2a70d0; border:0.5px solid #2a70d0; }
+.badge-owned { background:#0d2e18; color:#1fba87; border:0.5px solid #1fba87; }
+.no-positions { font-size:12px; color:#4a6080; padding:8px 0; line-height:1.6; }
+.field { margin-bottom:6px; }
+.field-label { font-size:11px; color:#8aaac8; margin-bottom:3px; }
+.field-row { display:flex; align-items:center; gap:7px; }
+.field-row input[type=range] { flex:1; accent-color:#2a70d0; }
+.field-row input[type=number] {
+  width:64px; background:#050d1a; border:0.5px solid #1a2e4a;
+  border-radius:5px; color:#e8edf5; font-family:'Courier New',monospace;
+  font-size:12px; padding:3px 5px; text-align:right; -moz-appearance:textfield;
+}
+.field-row input[type=number]::-webkit-inner-spin-button,
+.field-row input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; }
+.field-row input[type=number]:focus { outline:none; border-color:#2a70d0; }
+.run-btn {
+  width:100%; padding:8px; font-size:13px; border:0.5px solid #2a70d0;
+  color:#2a70d0; background:#0a1e38; margin-top:8px; letter-spacing:.04em;
+}
+.run-btn:hover { background:#1a3a6a; color:#e8edf5; }
+.run-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+/* position type tabs */
+.pos-tabs { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:10px; }
+.pos-tab {
+  padding:6px 4px; font-size:11px; font-family:'Courier New',monospace;
+  border:0.5px solid #1a2e4a; border-radius:6px; background:transparent;
+  cursor:pointer; transition:all 0.15s; text-align:center; font-weight:600;
+  letter-spacing:.03em; color:#4a6080;
+}
+.pos-tab:hover { border-color:#2a5090; color:#8aaac8; }
+.pos-tab.active-bc { border-color:#1fba87; background:rgba(31,186,135,0.1); color:#1fba87; }
+.pos-tab.active-sc { border-color:#e05a30; background:rgba(224,90,48,0.1); color:#e05a30; }
+.pos-tab.active-bp { border-color:#2a70d0; background:rgba(42,112,208,0.1); color:#2a70d0; }
+.pos-tab.active-sp { border-color:#c8a020; background:rgba(200,160,32,0.1); color:#c8a020; }
+
+/* results */
+.result-section { margin-bottom:14px; }
+.result-section:last-child { margin-bottom:0; }
+.result-pos-header {
+  font-size:12px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  padding:6px 10px; border-radius:6px; margin-bottom:8px; display:inline-block;
+}
+.strat-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:8px; }
+.strat-card {
+  background:#050d1a; border:0.5px solid #1a2e4a; border-radius:8px; padding:10px 12px;
+  position:relative; overflow:hidden;
+}
+.strat-card.best { border-width:1px; }
+.best-tag {
+  position:absolute; top:0; right:0; font-size:9px; font-weight:700;
+  padding:2px 7px; border-radius:0 0 0 5px; letter-spacing:.05em;
+  background:#1fba87; color:#050d1a;
+}
+.strat-name { font-size:10px; color:#4a6080; text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+.strat-desc { font-size:10px; color:#4a6080; margin-bottom:8px; line-height:1.4; }
+.strat-ev { font-size:22px; font-weight:500; margin-bottom:2px; }
+.strat-ev-share { font-size:11px; color:#4a6080; margin-bottom:6px; }
+.strat-pop { font-size:13px; font-weight:500; }
+.strat-pop-label { font-size:10px; color:#4a6080; margin-top:1px; }
+.divider { height:0.5px; background:#1a2e4a; margin:6px 0; }
+.strat-pcts { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; }
+.pct-item { background:#0a1628; border-radius:4px; padding:4px 6px; }
+.pct-label { font-size:9px; color:#4a6080; }
+.pct-val { font-size:12px; font-weight:500; color:#e8edf5; }
+
+/* model toggle */
+.model-row { display:flex; gap:5px; margin-bottom:8px; }
+.model-btn {
+  flex:1; padding:6px 4px; font-size:11px; font-family:'Courier New',monospace;
+  border:0.5px solid #1a2e4a; border-radius:6px; background:transparent;
+  color:#4a6080; cursor:pointer; transition:all 0.15s; text-align:center;
+  letter-spacing:.03em;
+}
+.model-btn.active-gbm { border-color:#2a70d0; background:rgba(42,112,208,0.1); color:#2a70d0; }
+.model-btn.active-svj { border-color:#BA7517; background:rgba(186,117,23,0.1); color:#BA7517; }
+.svj-panel { display:none; padding-top:8px; border-top:0.5px solid #1a2e4a; margin-top:4px; }
+
+/* portfolio */
+.ptable { width:100%; border-collapse:collapse; font-size:12px; }
+.ptable th { font-size:10px; color:#4a6080; text-transform:uppercase; letter-spacing:.05em; padding:4px 8px; border-bottom:0.5px solid #1a2e4a; text-align:left; }
+.ptable td { padding:6px 8px; border-bottom:0.5px solid #0f1e30; }
+.ptable tr:last-child td { border-bottom:none; }
+.pos-green { color:#1fba87; }
+.pos-red { color:#e05a30; }
+
+/* manual position form */
+.m-input {
+  width:100%; background:#050d1a; border:0.5px solid #1a2e4a;
+  border-radius:5px; color:#e8edf5; font-family:'Courier New',monospace;
+  font-size:13px; padding:4px 7px; -moz-appearance:textfield;
+  box-sizing:border-box;
+}
+.m-input::-webkit-inner-spin-button,
+.m-input::-webkit-outer-spin-button { -webkit-appearance:none; }
+.m-input:focus { outline:none; border-color:#2a70d0; }
+.m-input.ticker { font-weight:700; text-transform:uppercase; }
+.m-input.fill  { border-color:#c8a020; font-size:12px; }
+.m-input::placeholder { color:#2a4060; font-size:11px; }
+body.light .m-input { background:#f0f4f8; border-color:#c0cad4; color:#1a2a3a; }
+body.light .m-input:focus { border-color:#2a70d0; }
+body.light .m-input.fill { border-color:#c8a020; }
+body.light .m-input::placeholder { color:#a0b4c4; }
+.manual-form { display:none; padding-top:8px; border-top:0.5px solid #1a2e4a; margin-top:6px; }
+.manual-form.open { display:block; }
+.m-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px; }
+.m-use-btn {
+  width:100%; padding:6px; font-size:12px; font-family:'Courier New',monospace;
+  border:0.5px solid #2a70d0; border-radius:5px;
+  background:rgba(42,112,208,0.1); color:#2a70d0; cursor:pointer; margin-top:2px;
+  transition:all 0.15s;
+}
+.m-use-btn:hover { background:rgba(42,112,208,0.2); }
+body.light .manual-form { border-color:#d0dae4; }
+body.light .m-use-btn { background:#ddeeff; }
+
+/* manual position form */
+.manual-toggle {
+  width:100%; padding:5px 8px; font-size:11px; font-family:'Courier New',monospace;
+  border:0.5px solid #1a2e4a; border-radius:6px; background:transparent;
+  color:#4a6080; cursor:pointer; text-align:left; letter-spacing:.03em;
+  transition:all 0.15s; margin-bottom:6px;
+}
+.manual-toggle:hover { border-color:#2a5090; color:#8aaac8; }
+.manual-toggle.open { border-color:#2a70d0; color:#2a70d0; }
+.manual-active-badge {
+  display:inline-block; font-size:9px; font-weight:700; padding:1px 5px;
+  border-radius:3px; background:rgba(42,112,208,0.15); color:#2a70d0;
+  border:0.5px solid #2a70d0; letter-spacing:.04em; margin-left:6px; vertical-align:middle;
+}
+/* ── CONSISTENT BUTTON CLASSES ── */
+.adv-toggle-btn {
+  width:100%; padding:5px 8px; font-size:11px; font-family:'Courier New',monospace;
+  border-radius:6px; background:transparent; cursor:pointer;
+  text-align:left; letter-spacing:.03em; transition:all 0.15s;
+  border:0.5px solid #1a2e4a; color:#4a6080; margin-top:6px; display:block;
+}
+.adv-toggle-btn:hover { border-color:#2a5090; color:#8aaac8; }
+.svj-toggle { border-color:#BA7517; color:#BA7517; }
+.svj-toggle:hover { background:rgba(186,117,23,0.1); }
+body.light .adv-toggle-btn { border-color:#d0dae4; color:#8aaac8; }
+body.light .adv-toggle-btn:hover { background:#f0f4f8; color:#4a6080; }
+body.light .svj-toggle { border-color:#BA7517; color:#BA7517; }
+body.light .svj-toggle:hover { background:rgba(186,117,23,0.07); }
+
+/* ── FIELD LABEL ── */
+.field-label { font-size:11px; color:#8aaac8; margin-bottom:3px; display:block; }
+body.light .field-label { color:#4a6080; }
+
+/* ── DATE INPUT ── */
+input[type=date] {
+  width:100%; background:#050d1a; border:0.5px solid #1a2e4a;
+  border-radius:5px; color:#e8edf5; font-family:'Courier New',monospace;
+  font-size:12px; padding:4px 7px; color-scheme:dark; box-sizing:border-box;
+}
+input[type=date]:focus { outline:none; border-color:#2a70d0; }
+body.light input[type=date] { background:#f0f4f8 !important; border-color:#c0cad4 !important; color:#1a2a3a !important; color-scheme:light !important; }
+
+/* ── MANUAL TOGGLE BUTTON ── */
+.manual-toggle {
+  width:100%; padding:5px 8px; font-size:11px; font-family:'Courier New',monospace;
+  border:0.5px solid #1a2e4a; border-radius:6px; background:transparent;
+  color:#4a6080; cursor:pointer; text-align:left; letter-spacing:.03em;
+  transition:all 0.15s; margin-bottom:6px;
+}
+.manual-toggle:hover { border-color:#2a5090; color:#8aaac8; }
+.manual-toggle.open { border-color:#2a70d0; color:#2a70d0; }
+body.light .manual-toggle { border-color:#d0dae4; color:#8aaac8; }
+body.light .manual-toggle.open { border-color:#2a70d0; color:#2a70d0; }
+
+/* ── PARAMS PANEL TITLE (clickable) ── */
+.panel-title-clickable {
+  display:flex; align-items:center; justify-content:space-between;
+  cursor:pointer; margin-bottom:0; font-size:11px; color:#4a6080;
+  letter-spacing:.07em; text-transform:uppercase;
+}
+.panel-title-clickable:hover { color:#8aaac8; }
+body.light .panel-title-clickable { color:#8aaac8; }
+body.light .panel-title-clickable:hover { color:#4a6080; }
+
+/* ── POS TAB HOVER ── */
+body.light .pos-tab { border-color:#d0dae4; color:#8aaac8; }
+body.light .pos-tab:hover { border-color:#2a5090; color:#4a6080; }
+
+/* ── RUN BTN ── */
+body.light .run-btn { background:#ddeeff; border-color:#2a70d0; color:#1a4a90; }
+body.light .run-btn:hover { background:#c0d8f8; color:#1a2a3a; }
+body.light .run-btn:disabled { opacity:0.5; }
+
+/* ── ADV CARDS TOGGLE BTN ── */
+.adv-cards-btn {
+  width:100%; padding:5px 8px; font-size:11px; font-family:'Courier New',monospace;
+  border:0.5px solid #1a2e4a; border-radius:6px; background:transparent;
+  color:#4a6080; cursor:pointer; text-align:left; letter-spacing:.03em;
+  transition:all 0.15s;
+}
+.adv-cards-btn:hover { border-color:#2a5090; color:#8aaac8; }
+body.light .adv-cards-btn { border-color:#d0dae4; color:#8aaac8; }
+body.light .adv-cards-btn:hover { background:#f0f4f8; color:#4a6080; }
+
+/* ── M-USE BTN ── */
+body.light .m-use-btn { background:#ddeeff; border-color:#2a70d0; color:#1a4a90; }
+body.light .m-use-btn:hover { background:#c0d8f8; }
+
+/* ── STRAT CARD ── */
+body.light .strat-card { background:#f8fafc; border-color:#d0dae4; }
+body.light .pct-item { background:#eef2f8; }
+body.light .divider { background:#d0dae4; }
+body.light .strat-name { opacity:0.9; }
+body.light .strat-desc { color:#8aaac8; }
+body.light .strat-ev-share { color:#8aaac8; }
+body.light .strat-pop-label { color:#8aaac8; }
+body.light .pct-label { color:#8aaac8; }
+
+/* light mode */
+body.light { background:#f0f4f8; color:#1a2a3a; }
+body.light .panel { background:#fff; border-color:#d0dae4; }
+body.light .panel-title { color:#8aaac8; }
+body.light .pos-item { background:#f0f4f8; border-color:#d0dae4; }
+body.light .pos-item:hover { background:#e8eef6; }
+body.light .pos-item.active { background:#ddeeff; border-color:#2a70d0; }
+body.light .pos-meta, body.light .no-positions { color:#8aaac8; }
+body.light .field-label { color:#4a6080; }
+body.light .field-row input[type=number] { background:#f0f4f8; border-color:#c0cad4; color:#1a2a3a; }
+body.light .run-btn { background:#ddeeff; }
+body.light .strat-card { background:#f8fafc; border-color:#d0dae4; }
+body.light .pct-item { background:#f0f4f8; }
+body.light .model-btn { border-color:#d0dae4; color:#8aaac8; }
+body.light .ptable th { border-color:#d0dae4; }
+body.light .ptable td { border-color:#e8eef6; }
+body.light .back-btn, body.light .theme-btn { border-color:#c0cad4; color:#4a6080; }
+body.light input[type=date] { background:#f0f4f8 !important; border-color:#c0cad4 !important; color:#1a2a3a !important; color-scheme:light !important; }
+body.light .manual-toggle { border-color:#d0dae4; color:#8aaac8; }
+body.light .manual-toggle.open { border-color:#2a70d0; color:#2a70d0; }
+body.light #manualForm input { background:#f0f4f8; border-color:#c0cad4; color:#1a2a3a; }
+body.light #manualForm input:focus { border-color:#2a70d0; outline:none; }
+body.light .back-btn:hover, body.light .theme-btn:hover { background:#dde4ec; color:#1a2a3a; }
+body.light .svj-panel { border-color:#d0dae4; }
+body.light .divider { background:#d0dae4; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="header">Options <span>Strategy Tester</span></div>
+  <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">☀ Light</button>
+  <div style="flex:1;"></div>
+  <a class="back-btn" href="options_simulator.html">← Simulator</a>
+</div>
+
+<div class="layout">
+  <!-- LEFT -->
+  <div class="left-col">
+    <div class="panel">
+      <div class="panel-title">Saved positions</div>
+      <div class="pos-list" id="posList">
+        <div class="no-positions">No saved positions. Save some in the simulator first.</div>
+      </div>
+      <button class="manual-toggle" id="manualToggle" onclick="toggleManual()">+ enter position manually</button>
+      <div class="manual-form" id="manualForm">
+        <div class="m-grid">
+          <div class="field"><div class="field-label">Ticker</div><input class="m-input ticker" type="text" id="m_ticker" placeholder="AAPL" maxlength="6" oninput="this.value=this.value.toUpperCase()"></div>
+          <div class="field"><div class="field-label">Stock price (S)</div><input class="m-input" type="number" id="m_S" value="100" step="1"></div>
+          <div class="field"><div class="field-label">Strike (K)</div><input class="m-input" type="number" id="m_K" value="105" step="1"></div>
+          <div class="field"><div class="field-label">IV σ (%)</div><input class="m-input" type="number" id="m_sig" value="30" step="1"></div>
+          <div class="field">
+            <div class="field-label">Expiry date <span id="mExpiryLabel" style="color:#4a6080;font-size:10px;"></span></div>
+            <input class="m-input" type="date" id="m_expiry" style="color-scheme:dark;" oninput="updateManualDays()">
+            <input type="hidden" id="m_days" value="60">
+          </div>
+          <div class="field"><div class="field-label">Risk-free r (%)</div><input class="m-input" type="number" id="m_r" value="5" step="0.25"></div>
+          <div class="field"><div class="field-label">Drift μ (%)</div><input class="m-input" type="number" id="m_mu" value="8" step="1"></div>
+          <div class="field"><div class="field-label">Contracts</div><input class="m-input" type="number" id="m_nc" value="1" step="1"></div>
+        </div>
+        <div class="field"><div class="field-label">Fill price / share (optional)</div><input class="m-input fill" type="number" id="m_fill" placeholder="leave blank — uses BS fair value" step="0.01"></div>
+        <button class="m-use-btn" onclick="useManualPos()">Use this position →</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Position type to test</div>
+      <div class="pos-tabs">
+        <button class="pos-tab active-bc" id="tab-bc" onclick="setPositionType('bc')">BUY CALL</button>
+        <button class="pos-tab" id="tab-sc" onclick="setPositionType('sc')">SELL CALL</button>
+        <button class="pos-tab" id="tab-bp" onclick="setPositionType('bp')">BUY PUT</button>
+        <button class="pos-tab" id="tab-sp" onclick="setPositionType('sp')">SELL PUT</button>
+      </div>
+      <div id="posTypeDesc" style="font-size:10px;color:#4a6080;line-height:1.5;margin-bottom:4px;"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title-clickable" onclick="toggleParams()">
+        <span>Parameters</span>
+        <span id="paramsToggleIcon" style="font-size:10px;">▶</span>
+      </div>
+      <div id="paramsBody" style="display:none;margin-top:8px;">
+      <div class="field"><div class="field-label">Simulation paths</div><div class="field-row"><input type="range" id="np" min="1000" max="20000" step="1000" value="10000" oninput="ps('np')"><input type="number" id="np_n" value="10000" step="1000" oninput="psr('np')"></div></div>
+      <div class="field"><div class="field-label">Stop-loss % of premium</div><div class="field-row"><input type="range" id="slPct" min="10" max="90" step="5" value="50" oninput="ps('slPct')"><input type="number" id="slPct_n" value="50" step="5" oninput="psr('slPct')"></div></div>
+      <div class="field"><div class="field-label">Take-profit × premium</div><div class="field-row"><input type="range" id="tpMult" min="1.2" max="5" step="0.1" value="2" oninput="ps('tpMult')"><input type="number" id="tpMult_n" value="2" step="0.1" oninput="psr('tpMult')"></div></div>
+      <div class="field"><div class="field-label">Lock-in % (seller strategies)</div><div class="field-row"><input type="range" id="lockPct" min="50" max="95" step="5" value="80" oninput="ps('lockPct')"><input type="number" id="lockPct_n" value="80" step="5" oninput="psr('lockPct')"></div></div>
+      <div class="field"><div class="field-label">Cut-loss × (seller strategies)</div><div class="field-row"><input type="range" id="cutMult" min="1.2" max="4" step="0.1" value="2" oninput="ps('cutMult')"><input type="number" id="cutMult_n" value="2" step="0.1" oninput="psr('cutMult')"></div></div>
+      <div style="border-top:0.5px solid #1a2e4a;margin-top:8px;padding-top:8px;">
+        <div class="panel-title" style="margin-bottom:6px;">Advanced strategy parameters</div>
+        <div class="field">
+          <div class="field-label">DTE exit date <span id="dteExitDaysLabel" style="color:#4a6080;font-size:10px;"></span></div>
+          <input type="date" id="dteExitDate" style="width:100%;background:#050d1a;border:0.5px solid #1a2e4a;border-radius:5px;color:#e8edf5;font-family:'Courier New',monospace;font-size:12px;padding:3px 7px;color-scheme:dark;" oninput="updateDteFromDate()">
+          <input type="hidden" id="dteExit_n" value="21">
+        </div>
+        <div class="field"><div class="field-label">Delta exit threshold</div><div class="field-row"><input type="range" id="deltaExit" min="0.05" max="0.40" step="0.01" value="0.10" oninput="ps('deltaExit')"><input type="number" id="deltaExit_n" value="0.10" step="0.01" oninput="psr('deltaExit')"></div></div>
+        <div class="field"><div class="field-label">Scale-out take-profit ×</div><div class="field-row"><input type="range" id="scaleTP" min="1.2" max="5" step="0.1" value="1.5" oninput="ps('scaleTP')"><input type="number" id="scaleTP_n" value="1.5" step="0.1" oninput="psr('scaleTP')"></div></div>
+        <div class="field"><div class="field-label">IV spike exit × (buyer)</div><div class="field-row"><input type="range" id="ivSpike" min="1.1" max="3" step="0.1" value="1.5" oninput="ps('ivSpike')"><input type="number" id="ivSpike_n" value="1.5" step="0.1" oninput="psr('ivSpike')"></div></div>
+        <div class="field"><div class="field-label">Profit % to lock (seller)</div><div class="field-row"><input type="range" id="profitPct" min="25" max="90" step="5" value="50" oninput="ps('profitPct')"><input type="number" id="profitPct_n" value="50" step="5" oninput="psr('profitPct')"></div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Price process</div>
+      <div class="model-row">
+        <button class="model-btn active-gbm" id="mbtn-gbm" onclick="setModel('gbm')">GBM</button>
+        <button class="model-btn" id="mbtn-svj" onclick="setModel('svj')">SVJ</button>
+      </div>
+      <div id="mbtn-gbm-desc" style="font-size:10px;color:#4a6080;line-height:1.4;display:none;">Geometric Brownian Motion — textbook model, constant volatility, normally distributed returns. Underestimates crashes.</div>
+      <div id="mbtn-svj-desc" style="font-size:10px;color:#4a6080;line-height:1.4;">Stochastic Volatility + Jumps — volatility clusters and crashes happen suddenly. More realistic for equity options.</div>
+      <button id="svjParamsToggle" onclick="toggleSvjParams()" class="adv-toggle-btn svj-toggle">▼ edit SVJ parameters</button>
+      <div class="svj-panel" id="svjPanel">
+        <div class="field"><div class="field-label">Vol of vol κ</div><div class="field-row"><input type="range" id="volvol" min="0.1" max="1.0" step="0.05" value="0.32" oninput="ps('volvol')"><input type="number" id="volvol_n" value="0.32" step="0.05" oninput="psr('volvol')"></div></div>
+        <div class="field"><div class="field-label">Vol mean reversion θ</div><div class="field-row"><input type="range" id="volmr" min="0.5" max="8" step="0.5" value="3.0" oninput="ps('volmr')"><input type="number" id="volmr_n" value="3.0" step="0.5" oninput="psr('volmr')"></div></div>
+        <div class="field"><div class="field-label">Jump freq λ (per yr)</div><div class="field-row"><input type="range" id="jumpFreq" min="0" max="10" step="0.5" value="1.5" oninput="ps('jumpFreq')"><input type="number" id="jumpFreq_n" value="1.5" step="0.5" oninput="psr('jumpFreq')"></div></div>
+        <div class="field"><div class="field-label">Jump size mean %</div><div class="field-row"><input type="range" id="jumpMu" min="-30" max="10" step="1" value="-4" oninput="ps('jumpMu')"><input type="number" id="jumpMu_n" value="-4" step="1" oninput="psr('jumpMu')"></div></div>
+        <div class="field"><div class="field-label">Jump size σ %</div><div class="field-row"><input type="range" id="jumpSig" min="1" max="20" step="1" value="4" oninput="ps('jumpSig')"><input type="number" id="jumpSig_n" value="4" step="1" oninput="psr('jumpSig')"></div></div>
+        <div class="field"><div class="field-label">Vol-price corr ρ</div><div class="field-row"><input type="range" id="volCorr" min="-0.9" max="0" step="0.05" value="-0.55" oninput="ps('volCorr')"><input type="number" id="volCorr_n" value="-0.55" step="0.05" oninput="psr('volCorr')"></div></div>
+      </div>
+      </div><!-- end paramsBody -->
+      <button class="run-btn" id="runBtn" onclick="runSim()">↻ run simulation</button>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div id="rightCol">
+    <div class="panel" style="color:#4a6080;font-size:12px;line-height:1.7;">
+      Select a position from the left, choose a position type, set parameters and hit run.
+      Each strategy is tested across the same simulated paths so the comparison is apples-to-apples.
+    </div>
+  </div>
+</div>
+
+<script>
+// ── THEME ─────────────────────────────────────────────────────────────────
+let currentTheme='dark';
+try{const s=localStorage.getItem('options_sim_theme');if(s==='light'){currentTheme='light';document.body.classList.add('light');document.getElementById('themeBtn').textContent='🌙 Dark';}}catch(e){}
+function toggleTheme(){
+  currentTheme=currentTheme==='dark'?'light':'dark';
+  document.body.classList.toggle('light',currentTheme==='light');
+  document.getElementById('themeBtn').textContent=currentTheme==='light'?'🌙 Dark':'☀ Light';
+  try{localStorage.setItem('options_sim_theme',currentTheme);}catch(e){}
+}
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+const STORAGE_KEY='options_sim_v1';
+let activePos=null;
+let posType='bc'; // bc | sc | bp | sp
+let activeModel='svj';
+
+function loadSaved(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||[];}catch(e){return[];}}
+
+// ── PARAM SYNC ────────────────────────────────────────────────────────────
+function ps(id){document.getElementById(id+'_n').value=document.getElementById(id).value;}
+function psr(id){document.getElementById(id).value=document.getElementById(id+'_n').value;}
+function gp(id){return +document.getElementById(id+'_n').value;}
+
+// ── MODEL ─────────────────────────────────────────────────────────────────
+let svjParamsOpen = false;
+
+function setModel(m){
+  activeModel=m;
+  document.getElementById('mbtn-gbm').className='model-btn'+(m==='gbm'?' active-gbm':'');
+  document.getElementById('mbtn-svj').className='model-btn'+(m==='svj'?' active-svj':'');
+  document.getElementById('mbtn-gbm-desc').style.display=m==='gbm'?'block':'none';
+  document.getElementById('mbtn-svj-desc').style.display=m==='svj'?'block':'none';
+  // show/hide params toggle button
+  document.getElementById('svjParamsToggle').style.display=m==='svj'?'block':'none';
+  // keep params closed when switching to SVJ
+  if(m==='gbm'){ svjParamsOpen=false; document.getElementById('svjPanel').style.display='none'; }
+  updateSvjToggleLabel();
+}
+
+function toggleSvjParams(){
+  svjParamsOpen=!svjParamsOpen;
+  document.getElementById('svjPanel').style.display=svjParamsOpen?'block':'none';
+  updateSvjToggleLabel();
+}
+
+function updateSvjToggleLabel(){
+  const btn=document.getElementById('svjParamsToggle');
+  if(btn) btn.textContent=svjParamsOpen?'▲ hide SVJ parameters':'▼ edit SVJ parameters';
+}
+
+// ── MATH ──────────────────────────────────────────────────────────────────
+function randn(){return Math.sqrt(-2*Math.log(Math.random()))*Math.cos(2*Math.PI*Math.random());}
+function erf(x){
+  const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
+  const sign=x<0?-1:1;x=Math.abs(x);const t=1/(1+p*x);
+  return sign*(1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x));
+}
+function normCDF(x){return 0.5*(1+erf(x/Math.sqrt(2)));}
+function normPDF(x){return Math.exp(-0.5*x*x)/Math.sqrt(2*Math.PI);}
+function bsCall(S,K,r,sig,T){
+  if(T<=0)return Math.max(S-K,0);
+  const sqT=Math.sqrt(T),d1=(Math.log(S/K)+(r+sig*sig/2)*T)/(sig*sqT),d2=d1-sig*sqT;
+  return S*normCDF(d1)-K*Math.exp(-r*T)*normCDF(d2);
+}
+function bsPut(S,K,r,sig,T){
+  if(T<=0)return Math.max(K-S,0);
+  const sqT=Math.sqrt(T),d1=(Math.log(S/K)+(r+sig*sig/2)*T)/(sig*sqT),d2=d1-sig*sqT;
+  return K*Math.exp(-r*T)*normCDF(-d2)-S*normCDF(-d1);
+}
+
+// ── PATH GENERATION ───────────────────────────────────────────────────────
+function genPathGBM(S,mu,sig,T){
+  const dt=1/365,path=[S];let s=S;
+  for(let i=0;i<T;i++){s*=Math.exp((mu-0.5*sig*sig)*dt+sig*Math.sqrt(dt)*randn());path.push(s);}
+  return path;
+}
+function genPathSVJ(S,mu,sig,T){
+  const dt=1/365,sqdt=Math.sqrt(dt);
+  const kappa=gp('volvol'),theta=gp('volmr'),lambda=gp('jumpFreq');
+  const jmu=gp('jumpMu')/100,jsig=gp('jumpSig')/100,rho=gp('volCorr');
+  const path=[S];let s=S,v=sig*sig;const sigLT=v;
+  for(let i=0;i<T;i++){
+    const z1=randn(),z2=randn();
+    v=Math.max(v+theta*(sigLT-v)*dt+kappa*Math.sqrt(Math.max(v,0))*sqdt*(rho*z1+Math.sqrt(1-rho*rho)*z2),0.0001);
+    let ret=(mu-0.5*v)*dt+Math.sqrt(v)*sqdt*z1;
+    if(Math.random()<lambda*dt)ret+=jmu+jsig*randn();
+    s*=Math.exp(ret);path.push(s);
+  }
+  return path;
+}
+function genPath(S,mu,sig,T){
+  return activeModel==='svj'?genPathSVJ(S,mu,sig,T):genPathGBM(S,mu,sig,T);
+  return activeModel==='svj'?genPathSVJ(S,mu,sig,T):genPathGBM(S,mu,sig,T);
+}
+
+// ── POSITION TYPE ─────────────────────────────────────────────────────────
+const POS_META={
+  bc:{label:'Buy Call',color:'#1fba87',bg:'rgba(31,186,135,0.1)',
+      desc:'You pay a premium and profit if the stock rises above the strike. Max loss = premium paid.'},
+  sc:{label:'Sell Call',color:'#e05a30',bg:'rgba(224,90,48,0.1)',
+      desc:'You collect a premium and profit if the stock stays below the strike. Max loss is theoretically unlimited (uncovered).'},
+  bp:{label:'Buy Put',color:'#2a70d0',bg:'rgba(42,112,208,0.1)',
+      desc:'You pay a premium and profit if the stock falls below the strike. Max loss = premium paid.'},
+  sp:{label:'Sell Put',color:'#c8a020',bg:'rgba(200,160,32,0.1)',
+      desc:'You collect a premium and profit if the stock stays above the strike. Max loss = strike - premium.'},
+};
+
+function setPositionType(t){
+  posType=t;
+  ['bc','sc','bp','sp'].forEach(k=>{
+    const el=document.getElementById('tab-'+k);
+    el.className='pos-tab'+(k===t?' active-'+k:'');
+  });
+  document.getElementById('posTypeDesc').textContent=POS_META[t].desc;
+}
+
+// ── STRATEGIES ────────────────────────────────────────────────────────────
+// Each strategy: { name, desc, exit(path, bsPriceFn, premium, params) -> {day, pnl} }
+// pnl is from the POSITION's perspective (already accounts for buy vs sell)
+
+function makeBSPriceFn(K,r,sig,T,isCall){
+  return (stockPrice,dayX)=>{
+    const tRem=Math.max((T-dayX)/365,0.0001);
+    return isCall?bsCall(stockPrice,K,r,sig,tRem):bsPut(stockPrice,K,r,sig,tRem);
+  };
+}
+
+// Buyer strategies (bc, bp) — paid premium, receive payoff
+const BUYER_STRATEGIES=[
+  {
+    id:'hold',
+    name:'Hold to expiry',
+    desc:'Do nothing. Collect the payoff at expiry or let it expire worthless.',
+    exit(path,bsPrice,premium,p,isCall){
+      const finalS=path[path.length-1];
+      const payoff=isCall?Math.max(finalS-p.K,0):Math.max(p.K-finalS,0);
+      return {day:p.T, pnl:payoff-premium};
+    }
+  },
+  {
+    id:'tp',
+    name:'Take profit at '+'{tpMult}'+'×',
+    desc:'Sell if option value reaches {tpMult}× what you paid. Otherwise hold to expiry.',
+    exit(path,bsPrice,premium,p,isCall){
+      const target=premium*p.tpMult;
+      for(let d=1;d<path.length;d++){
+        if(bsPrice(path[d],d)>=target) return {day:d,pnl:bsPrice(path[d],d)-premium};
+      }
+      const finalS=path[path.length-1];
+      return {day:p.T,pnl:(isCall?Math.max(finalS-p.K,0):Math.max(p.K-finalS,0))-premium};
+    }
+  },
+  {
+    id:'sl',
+    name:'Stop loss at '+'{slPct}'+'%',
+    desc:'Sell if option loses {slPct}% of its value. Otherwise hold to expiry.',
+    exit(path,bsPrice,premium,p,isCall){
+      const floor=premium*(1-p.slPct/100);
+      for(let d=1;d<path.length;d++){
+        if(bsPrice(path[d],d)<=floor) return {day:d,pnl:bsPrice(path[d],d)-premium};
+      }
+      const finalS=path[path.length-1];
+      return {day:p.T,pnl:(isCall?Math.max(finalS-p.K,0):Math.max(p.K-finalS,0))-premium};
+    }
+  },
+,
+  // ── ADVANCED BUYER STRATEGIES ──────────────────────────────────────────
+  {
+    id:'dte',
+    name:'Exit at {dteExit} DTE',
+    desc:'Close the position when only {dteExit} days remain before expiry, regardless of profit or loss. Avoids the volatile final weeks when theta decay accelerates sharply.',
+    advanced:true,
+    exit(path,bsPrice,premium,p,isCall){
+      const exitDay=Math.max(0,p.T-p.dteExit);
+      if(exitDay<=0){
+        const finalS=path[path.length-1];
+        return {day:p.T,pnl:(isCall?Math.max(finalS-p.K,0):Math.max(p.K-finalS,0))-premium};
+      }
+      const val=bsPrice(path[Math.min(exitDay,path.length-1)],exitDay);
+      return {day:exitDay,pnl:val-premium};
+    }
+  },
+  {
+    id:'delta',
+    name:'Exit if delta < {deltaExit}',
+    desc:'Sell if delta drops below {deltaExit}. A very low delta means the option is deep OTM and unlikely to recover — essentially a lottery ticket.',
+    advanced:true,
+    exit(path,bsPrice,premium,p,isCall){
+      for(let d=1;d<path.length;d++){
+        const tRem=Math.max((p.T-d)/365,0.0001);
+        const S2=path[d],sqT=Math.sqrt(tRem);
+        if(p.sig*sqT<0.0001) continue;
+        const d1=(Math.log(S2/p.K)+(p.r+p.sig*p.sig/2)*tRem)/(p.sig*sqT);
+        const delta=isCall?normCDF(d1):normCDF(d1)-1;
+        if(Math.abs(delta)<p.deltaExit){
+          return {day:d,pnl:bsPrice(S2,d)-premium};
+        }
+      }
+      const finalS=path[path.length-1];
+      return {day:p.T,pnl:(isCall?Math.max(finalS-p.K,0):Math.max(p.K-finalS,0))-premium};
+    }
+  },
+  {
+    id:'scaleout',
+    name:'Scale out at {scaleTP}×, hold half',
+    desc:'Sell half the position when value reaches {scaleTP}× premium. Let the remaining half ride to expiry — playing with house money on the rest.',
+    advanced:true,
+    exit(path,bsPrice,premium,p,isCall){
+      let scaledOut=false;
+      let halfPnl=0;
+      for(let d=1;d<path.length;d++){
+        const val=bsPrice(path[d],d);
+        if(!scaledOut&&val>=premium*p.scaleTP){
+          scaledOut=true;
+          halfPnl=(val-premium)*0.5; // half position closed here
+        }
+      }
+      const finalS=path[path.length-1];
+      const finalPayoff=isCall?Math.max(finalS-p.K,0):Math.max(p.K-finalS,0);
+      const remainingPnl=(finalPayoff-premium)*0.5;
+      return {day:p.T,pnl:halfPnl+remainingPnl};
+    }
+  },
+];
+
+// Seller strategies (sc, sp) — collected premium, owe payoff
+const SELLER_STRATEGIES=[
+  {
+    id:'hold',
+    name:'Hold to expiry',
+    desc:'Do nothing. Keep the full premium if expires worthless, pay the full payoff if not.',
+    exit(path,bsPrice,premium,p,isCall){
+      const finalS=path[path.length-1];
+      const payoff=isCall?Math.max(finalS-p.K,0):Math.max(p.K-finalS,0);
+      return {day:p.T, pnl:premium-payoff};
+    }
+  },
+  {
+    id:'lockin',
+    name:'Lock in {lockPct}% of premium',
+    desc:'Close (buy back) when {lockPct}% of the premium has decayed away, locking in most of the gain.',
+    exit(path,bsPrice,premium,p,isCall){
+      const target=premium*(1-p.lockPct/100);
+      for(let d=1;d<path.length;d++){
+        const curVal=bsPrice(path[d],d);
+        if(curVal<=target) return {day:d,pnl:premium-curVal};
+      }
+      const finalS=path[path.length-1];
+      return {day:p.T,pnl:premium-(isCall?Math.max(finalS-p.K,0):Math.max(p.K-finalS,0))};
+    }
+  },
+  {
+    id:'cutloss',
+    name:'Cut loss at {cutMult}×',
+    desc:'Buy back if the option value rises to {cutMult}× the premium collected (cutting the loss before it grows).',
+    exit(path,bsPrice,premium,p,isCall){
+      const ceiling=premium*p.cutMult;
+      for(let d=1;d<path.length;d++){
+        const curVal=bsPrice(path[d],d);
+        if(curVal>=ceiling) return {day:d,pnl:premium-curVal};
+      }
+      const finalS=path[path.length-1];
+      return {day:p.T,pnl:premium-(isCall?Math.max(finalS-p.K,0):Math.max(p.K-finalS,0))};
+    }
+  },
+,
+  // ── ADVANCED SELLER STRATEGIES ─────────────────────────────────────────
+  {
+    id:'dte_sell',
+    name:'Close at {dteExit} DTE',
+    desc:'Buy back the option when {dteExit} days remain. Locks in most of the theta decay without riding the high-risk final stretch. Very common among professional sellers.',
+    advanced:true,
+    exit(path,bsPrice,premium,p,isCall){
+      const exitDay=Math.max(0,p.T-p.dteExit);
+      if(exitDay<=0){
+        const finalS=path[path.length-1];
+        return {day:p.T,pnl:premium-(isCall?Math.max(finalS-p.K,0):Math.max(p.K-finalS,0))};
+      }
+      const val=bsPrice(path[Math.min(exitDay,path.length-1)],exitDay);
+      return {day:exitDay,pnl:premium-val};
+    }
+  },
+  {
+    id:'profitpct',
+    name:'Close at {profitPct}% of max profit',
+    desc:'Buy back when you have captured {profitPct}% of the original premium collected. The remaining gain is not worth the tail risk of holding further.',
+    advanced:true,
+    exit(path,bsPrice,premium,p,isCall){
+      const target=premium*(1-p.profitPct/100);
+      for(let d=1;d<path.length;d++){
+        const val=bsPrice(path[d],d);
+        if(val<=target) return {day:d,pnl:premium-val};
+      }
+      const finalS=path[path.length-1];
+      return {day:p.T,pnl:premium-(isCall?Math.max(finalS-p.K,0):Math.max(p.K-finalS,0))};
+    }
+  },
+  {
+    id:'delta_sell',
+    name:'Close if delta > {deltaExit} (sell)',
+    desc:'Buy back if delta rises above {deltaExit} — the option is moving deep ITM and the risk profile has shifted dramatically against you. Mechanically avoids runaway losses.',
+    advanced:true,
+    exit(path,bsPrice,premium,p,isCall){
+      for(let d=1;d<path.length;d++){
+        const tRem=Math.max((p.T-d)/365,0.0001);
+        const S2=path[d],sqT=Math.sqrt(tRem);
+        if(p.sig*sqT<0.0001) continue;
+        const d1=(Math.log(S2/p.K)+(p.r+p.sig*p.sig/2)*tRem)/(p.sig*sqT);
+        const delta=isCall?normCDF(d1):Math.abs(normCDF(d1)-1);
+        if(delta>p.deltaExit){
+          return {day:d,pnl:premium-bsPrice(S2,d)};
+        }
+      }
+      const finalS=path[path.length-1];
+      return {day:p.T,pnl:premium-(isCall?Math.max(finalS-p.K,0):Math.max(p.K-finalS,0))};
+    }
+  },
+];
+
+// ── SIMULATION ────────────────────────────────────────────────────────────
+function runSim(){
+  if(!activePos){alert('Select a position first.');return;}
+  const btn=document.getElementById('runBtn');
+  btn.textContent='⏳ simulating...';btn.disabled=true;
+
+  requestAnimationFrame(()=>setTimeout(()=>{
+    const pos=activePos;
+    const S=+pos.S,K=+pos.K,sig=+pos.sig/100,r=+pos.r/100,mu=+pos.mu/100;
+    const T=+pos.days,nc=+(pos.nc||1);
+    const isCall=posType==='bc'||posType==='sc';
+    const isBuyer=posType==='bc'||posType==='bp';
+    const rawPrem=isCall?bsCall(S,K,r,sig,T/365):bsPut(S,K,r,sig,T/365);
+    const premium=pos.fillPrice?+pos.fillPrice:rawPrem;
+    const np=gp('np'),slPct=gp('slPct'),tpMult=gp('tpMult'),lockPct=gp('lockPct'),cutMult=gp('cutMult');
+    const dteExit=gp('dteExit'),deltaExit=gp('deltaExit'),scaleTP=gp('scaleTP'),ivSpike=gp('ivSpike'),profitPct=gp('profitPct');
+    const params={S,K,sig,r,mu,T,np,slPct,tpMult,lockPct,cutMult,dteExit,deltaExit,scaleTP,ivSpike,profitPct};
+    const allStrats=isBuyer?BUYER_STRATEGIES:SELLER_STRATEGIES;
+    const coreStrats=allStrats.filter(s=>!s.advanced);
+    const advStrats=allStrats.filter(s=>s.advanced);
+    const strats=[...coreStrats,...advStrats];
+    const bsPrice=makeBSPriceFn(K,r,sig,T,isCall);
+
+    // Run Monte Carlo
+    const pnls={};
+    strats.forEach(s=>{pnls[s.id]=[];});
+
+    for(let i=0;i<np;i++){
+      const path=genPath(S,mu,sig,T);
+      strats.forEach(s=>{
+        const {pnl}=s.exit(path,bsPrice,premium,params,isCall);
+        pnls[s.id].push(pnl*100*nc);
+      });
+    }
+
+    // Stats
+    function stats(arr){
+      const sorted=[...arr].sort((a,b)=>a-b);
+      const mean=arr.reduce((a,b)=>a+b,0)/arr.length;
+      const pop=arr.filter(x=>x>0).length/arr.length;
+      return {
+        mean, pop,
+        p10:sorted[Math.floor(0.10*arr.length)],
+        p25:sorted[Math.floor(0.25*arr.length)],
+        p75:sorted[Math.floor(0.75*arr.length)],
+        p90:sorted[Math.floor(0.90*arr.length)],
+      };
+    }
+
+    const statMap={};
+    strats.forEach(s=>{statMap[s.id]=stats(pnls[s.id]);});
+    const bestId=strats.reduce((b,s)=>statMap[s.id].mean>statMap[b.id].mean?s:b,strats[0]).id;
+
+    renderResults(coreStrats,advStrats,statMap,bestId,premium,nc,pos,params,isCall,isBuyer);
+    btn.textContent='↻ run simulation';btn.disabled=false;
+  },0));
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+let advOpen = false;
+let _advStratCount = 0;
+function toggleAdvCards(){
+  advOpen = !advOpen;
+  const el = document.getElementById('advCards');
+  const btn = document.getElementById('advToggleBtn');
+  if(el) el.style.display = advOpen ? 'block' : 'none';
+  if(btn) btn.textContent = (advOpen ? '▲ hide' : '▼ show') + ' advanced strategies (' + _advStratCount + ')';
+}
+function renderResults(coreStrats,advStrats,statMap,bestId,premium,nc,pos,params,isCall,isBuyer){
+  const strats=[...coreStrats,...advStrats];
+  const meta=POS_META[posType];
+  const shares=nc*100;
+  const fmt=v=>(v>=0?'+$':'-$')+Math.abs(v).toFixed(2);
+  const fmtB=v=>{const s=v>=0?'+$':'-$';const a=Math.abs(v);return s+(a>=1000?(a/1000).toFixed(1)+'k':a.toFixed(2));};
+  const fmtShare=v=>(v>=0?'+$':'-$')+Math.abs(v/shares).toFixed(2);
+
+  // Resolve strategy name templates
+  function resolveN(name){
+    return name
+      .replace('{tpMult}',params.tpMult+'×')
+      .replace('{slPct}',params.slPct+'%')
+      .replace('{lockPct}',params.lockPct+'%')
+      .replace('{cutMult}',params.cutMult+'×')
+      .replace('{dteExit}',params.dteExit+' days')
+      .replace('{deltaExit}',params.deltaExit)
+      .replace('{scaleTP}',params.scaleTP+'×')
+      .replace('{profitPct}',params.profitPct+'%');
+  }
+  function resolveD(desc){
+    return desc
+      .replace(/{tpMult}/g,params.tpMult+'×')
+      .replace(/{slPct}/g,params.slPct+'%')
+      .replace(/{lockPct}/g,params.lockPct+'%')
+      .replace(/{cutMult}/g,params.cutMult+'×')
+      .replace(/{dteExit}/g,params.dteExit+' days')
+      .replace(/{deltaExit}/g,params.deltaExit)
+      .replace(/{scaleTP}/g,params.scaleTP+'×')
+      .replace(/{profitPct}/g,params.profitPct+'%');
+  }
+
+  const modelTag=activeModel==='svj'
+    ?'<span style="color:#BA7517;font-size:10px;margin-left:8px;">SVJ model</span>'
+    :'<span style="color:#2a70d0;font-size:10px;margin-left:8px;">GBM model</span>';
+
+  function makeCard(s,st){
+    const isBest=s.id===bestId;
+    const evColor=st.mean>=0?'#1fba87':'#e05a30';
+    const popColor=st.pop>=0.5?'#1fba87':st.pop>=0.35?'#c8a020':'#e05a30';
+    return `<div class="strat-card${isBest?' best':''}" style="${isBest?'border-color:'+meta.color+';':''}">
+      ${isBest?'<div class="best-tag" style="background:'+meta.color+'">BEST EV</div>':''}
+      <div class="strat-name" style="color:${meta.color}">${resolveN(s.name)}</div>
+      <div class="strat-desc">${resolveD(s.desc)}</div>
+      <div class="divider"></div>
+      <div class="strat-ev" style="color:${evColor}">${fmtB(st.mean)}</div>
+      <div class="strat-ev-share">${fmtShare(st.mean)} / share &nbsp;·&nbsp; ${nc} contract${nc>1?'s':''} (${shares} shares)</div>
+      <div class="strat-pop" style="color:${popColor}">${(st.pop*100).toFixed(1)}%</div>
+      <div class="strat-pop-label">probability of profit</div>
+      <div class="strat-pcts">
+        <div class="pct-item"><div class="pct-label">10th pct</div><div class="pct-val" style="color:${st.p10>=0?'#1fba87':'#e05a30'}">${fmt(st.p10)}</div></div>
+        <div class="pct-item"><div class="pct-label">25th pct</div><div class="pct-val" style="color:${st.p25>=0?'#1fba87':'#e05a30'}">${fmt(st.p25)}</div></div>
+        <div class="pct-item"><div class="pct-label">75th pct</div><div class="pct-val" style="color:${st.p75>=0?'#1fba87':'#e05a30'}">${fmt(st.p75)}</div></div>
+        <div class="pct-item"><div class="pct-label">90th pct</div><div class="pct-val" style="color:${st.p90>=0?'#1fba87':'#e05a30'}">${fmt(st.p90)}</div></div>
+      </div>
+    </div>`;
+  }
+  _advStratCount=advStrats.length;
+  advOpen=false;
+  const coreCards=coreStrats.map(s=>makeCard(s,statMap[s.id])).join('');
+  const advCards=advStrats.map(s=>makeCard(s,statMap[s.id])).join('');
+
+  // Portfolio table
+  const allPos=loadSaved();
+  const POS_COLORS={'buy-call':'#1fba87','sell-call':'#e05a30','buy-put':'#2a70d0','sell-put':'#c8a020'};
+  const portRows=allPos.map(p=>{
+    const pIsCall=p.optionType==='call';
+    const pPrem=p.fillPrice?+p.fillPrice:(pIsCall?bsCall(+p.S,+p.K,+p.r/100,+p.sig/100,+p.days/365):bsPut(+p.S,+p.K,+p.r/100,+p.sig/100,+p.days/365));
+    const pCur=pIsCall?bsCall(+p.S,+p.K,+p.r/100,+p.sig/100,+p.days/365):bsPut(+p.S,+p.K,+p.r/100,+p.sig/100,+p.days/365);
+    const pnlTotal=(pCur-pPrem)*100*(+(p.nc||1))*(p.side==='sell'?-1:1);
+    const col=POS_COLORS[p.side+'-'+p.optionType]||'#888';
+    return `<tr>
+      <td style="color:${col};font-weight:700">${p.ticker}</td>
+      <td>$${(+p.K).toFixed(0)} ${p.optionType}</td>
+      <td>${p.side}</td>
+      <td>${p.days}d</td>
+      <td>${p.type==='owned'?'<span class="pos-green">OWNED</span>':'WATCH'}</td>
+      <td>$${pPrem.toFixed(2)}</td>
+      <td>$${pCur.toFixed(2)}</td>
+      <td class="${pnlTotal>=0?'pos-green':'pos-red'}">${pnlTotal>=0?'+$':'-$'}${Math.abs(pnlTotal).toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('rightCol').innerHTML=`
+    <div class="panel">
+      <div class="panel-title">${meta.label} · ${pos.ticker} · $${pos.K} strike · ${pos.days}d · ${params.np.toLocaleString()} paths${modelTag}</div>
+      <div style="font-size:11px;color:#4a6080;margin-bottom:10px;">Premium: $${premium.toFixed(2)}/share · ${nc} contract${nc>1?'s':''} · ${shares} shares · ${isBuyer?'Paid':'Collected'}: $${(premium*shares).toFixed(2)} total</div>
+      <div class="strat-cards" id="coreCards">${coreCards}</div>
+      <div style="margin-top:10px;">
+        <button onclick="toggleAdvCards()" id="advToggleBtn" class="adv-cards-btn">▼ show advanced strategies (${advStrats.length})</button>
+        <div id="advCards" style="display:none;margin-top:8px;"><div class="strat-cards">${advCards}</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Portfolio — all saved positions</div>
+      <table class="ptable">
+        <thead><tr><th>Ticker</th><th>Strike</th><th>Side</th><th>Days</th><th>Status</th><th>Entry</th><th>BS value</th><th>P&L est.</th></tr></thead>
+        <tbody>${portRows||'<tr><td colspan="8" style="color:#4a6080;padding:8px;">No positions saved.</td></tr>'}</tbody>
+      </table>
+    </div>`;
+}
+
+// ── MANUAL POSITION ──────────────────────────────────────────────────────────
+let manualOpen = false;
+let usingManual = false;
+
+function toggleManual(){
+  manualOpen = !manualOpen;
+  document.getElementById('manualForm').classList.toggle('open', manualOpen);
+  const btn = document.getElementById('manualToggle');
+  btn.classList.toggle('open', manualOpen);
+  btn.textContent = manualOpen ? '▲ close manual entry' : '+ enter position manually';
+}
+
+function useManualPos(){
+  const ticker = document.getElementById('m_ticker').value.trim() || 'MANUAL';
+  const S   = +document.getElementById('m_S').value;
+  const K   = +document.getElementById('m_K').value;
+  const sig = +document.getElementById('m_sig').value;
+  const r   = +document.getElementById('m_r').value;
+  const mu  = +document.getElementById('m_mu').value;
+  const days= +document.getElementById('m_days').value;
+  const nc  = +document.getElementById('m_nc').value || 1;
+  const fill= document.getElementById('m_fill').value;
+
+  if(!S||!K||!sig||!days){ alert('Fill in at least S, K, IV, and days.'); return; }
+
+  activePos = {
+    id: 'manual',
+    ticker, type:'watch',
+    side: posType==='bc'||posType==='bp'?'buy':'sell',
+    optionType: posType==='bc'||posType==='sc'?'call':'put',
+    S, K, sig, r: r||5, mu: mu||8, days, nc,
+    fillPrice: fill ? +fill : null,
+  };
+  usingManual = true;
+
+  // highlight the manual button
+  document.getElementById('manualToggle').textContent='▲ close manual entry — '+ticker+' active';
+  // deselect any saved position
+  renderPosList();
+  // flash a confirmation
+  const btn=document.querySelector('[onclick="useManualPos()"]');
+  const orig=btn.textContent;
+  btn.textContent='✓ position set — hit run';
+  btn.style.borderColor='#1fba87'; btn.style.color='#1fba87'; btn.style.background='rgba(31,186,135,0.1)';
+  setTimeout(()=>{ btn.textContent=orig; btn.style.borderColor='#2a70d0'; btn.style.color='#2a70d0'; btn.style.background='rgba(42,112,208,0.1)'; },2000);
+}
+
+// ── MANUAL EXPIRY DATE HELPER ─────────────────────────────────────────────────
+function updateManualDays(){
+  const el=document.getElementById('m_expiry');
+  const lbl=document.getElementById('mExpiryLabel');
+  if(!el.value){ if(lbl) lbl.textContent=''; return; }
+  const today=new Date(); today.setHours(0,0,0,0);
+  const chosen=new Date(el.value+'T00:00:00');
+  const diff=Math.max(1,Math.round((chosen-today)/(1000*60*60*24)));
+  if(lbl) lbl.textContent='('+diff+' days)';
+  document.getElementById('m_days').value=diff;
+}
+
+// ── DTE DATE HELPER ──────────────────────────────────────────────────────────
+function updateDteFromDate(){
+  const dateEl=document.getElementById('dteExitDate');
+  const labelEl=document.getElementById('dteExitDaysLabel');
+  if(!dateEl.value){ if(labelEl) labelEl.textContent=''; return; }
+  const today=new Date(); today.setHours(0,0,0,0);
+  const chosen=new Date(dateEl.value+'T00:00:00');
+  const diffDays=Math.round((chosen-today)/(1000*60*60*24));
+  if(labelEl) labelEl.textContent='('+Math.max(0,diffDays)+' days from today)';
+  // store as dteExit_n for param reading
+  const dteInput=document.getElementById('dteExit_n');
+  if(dteInput) dteInput.value=Math.max(1,diffDays);
+}
+
+// hidden dteExit_n field — read by gp('dteExit')
+// (added as hidden input in HTML below)
+
+// ── PARAMS TOGGLE ────────────────────────────────────────────────────────────
+let paramsOpen = false;
+function toggleParams(){
+  paramsOpen = !paramsOpen;
+  document.getElementById('paramsBody').style.display = paramsOpen ? 'block' : 'none';
+  document.getElementById('paramsToggleIcon').textContent = paramsOpen ? '▼' : '▶';
+}
+
+
+// ── POSITION LIST ─────────────────────────────────────────────────────────
+function renderPosList(){
+  const arr=loadSaved();
+  const list=document.getElementById('posList');
+  if(!arr.length){
+    list.innerHTML='<div class="no-positions">No positions found (key: options_sim_v1).<br>Save positions in the simulator first. Both files must be in the same folder.</div>';
+    return;
+  }
+  const POS_COLORS={'buy-call':'#1fba87','sell-call':'#e05a30','buy-put':'#2a70d0','sell-put':'#c8a020'};
+  list.innerHTML=arr.map(pos=>{
+    const col=POS_COLORS[pos.side+'-'+pos.optionType]||'#888';
+    const isActive=activePos&&activePos.id===pos.id;
+    const isOwned=pos.type==='owned';
+    const fillStr=isOwned&&pos.fillPrice?' \u0040$'+(+pos.fillPrice).toFixed(2):'';
+    return `<div class="pos-item${isActive?' active':''}${isOwned?' owned':''}" onclick="selectPos('${pos.id}')">
+      <div>
+        <div class="pos-ticker" style="color:${col}">${pos.ticker}</div>
+        <div class="pos-meta">$${pos.K} ${pos.optionType} · ${pos.days}d · ${pos.side}${fillStr}</div>
+      </div>
+      <span class="pos-badge ${isOwned?'badge-owned':'badge-watch'}">${isOwned?'OWNED':'WATCH'}</span>
+    </div>`;
+  }).join('');
+}
+
+function selectPos(id){
+  const arr=loadSaved();
+  activePos=arr.find(p=>p.id===id)||null;
+  // auto-select position type to match saved position
+  if(activePos){
+    const k=activePos.side==='buy'&&activePos.optionType==='call'?'bc'
+      :activePos.side==='sell'&&activePos.optionType==='call'?'sc'
+      :activePos.side==='buy'&&activePos.optionType==='put'?'bp':'sp';
+    setPositionType(k);
+  }
+  renderPosList();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',()=>{
+  renderPosList();
+  setPositionType('bc');
+  setModel('svj');
+  // set default manual expiry ~60 days out
+  const mExp=document.getElementById('m_expiry');
+  if(mExp){
+    const d=new Date(); d.setDate(d.getDate()+60);
+    mExp.value=d.toISOString().split('T')[0];
+    updateManualDays();
+  }
+  // set default DTE exit date ~21 days from today
+  const dteEl=document.getElementById('dteExitDate');
+  if(dteEl){
+    const d2=new Date(); d2.setDate(d2.getDate()+21);
+    dteEl.value=d2.toISOString().split('T')[0];
+    updateDteFromDate();
+  }
+});
+</script>
+</body>
+</html>
